@@ -1,0 +1,243 @@
+---
+title: "MultivariateAna_DRIL68"
+Author: Yuting Qiu
+Date: 2019-9-13
+output: html_notebook
+---
+
+
+DRIL68 Pop
+# use the 2environment GW for GW.
+```{r setup, include=FALSE}
+## clear objects in memory
+rm(list=ls(all=TRUE))
+## load libraries
+library(dplyr)
+library(rrcovNA)
+library(rrcovHD)
+library(ggplot2)
+library(plotly)
+library(qqman)
+```
+
+```{r}
+cross <- "NC304Oh7B"
+
+#read in master map
+map.master <- read.table("DRIL_markerID_master.txt", header=T, sep="\t") #markers for all populations
+map.master$Population <- sub("x", "", map.master$Population)
+map.master.deduped <- unique( map.master[ , 2:4 ] )
+map <- subset(map.master, Population==cross) #makers information only for the population interested
+```
+
+
+```{r}
+#read ric files from ICIM (RIC files include the LOD score)
+#paste is used to Concatenate vectors after converting to character.
+
+library(readxl)
+allric <- read_excel("DRIL68_ric.xlsx", sheet = "ALL")
+GLSric <- allric[allric$TraitName == "GLS_lsm",]
+GWric <- allric[allric$TraitName == "DRIL68_2EN_GW",]
+NCLBric <- allric[allric$TraitName == "NLB_lsm",]
+SCLBric <- allric[allric$TraitName == "SLB_lsm",]
+
+GLSric <- subset(GLSric, Environment=="Mean") #190 obs
+GWric <- subset(GWric, Environment=="Mean")
+NCLBric <- subset(NCLBric, Environment=="Mean")
+SCLBric <- subset(SCLBric, Environment=="Mean")
+```
+
+# DRIL68 use the NOM65 data set!!!
+```{r}
+#### OBSERVED DATA
+lods <- cbind.data.frame(MarkerID=GLSric$MarkerName,
+                         gls.lod=GLSric$LOD,
+                          gw.lod=GWric$LOD,
+                         nclb.lod=NCLBric$LOD,
+                         sclb.lod=SCLBric$LOD,
+                         gls.add=GLSric$Add,
+                          gw.add=GWric$Add,
+                         nclb.add=NCLBric$Add,
+                         sclb.add=SCLBric$Add)
+
+
+### Thresholds
+library(readxl)
+NC344oH7Btic <- read_excel("tic_for_all.xlsx", sheet= "DRIL68")
+GW.tic <- subset(NC344oH7Btic, TRAIT=="19GW_2EN_NOM65")$TIC
+GLS.tic <- subset(NC344oH7Btic, TRAIT=="GLS_NOM65")$TIC
+NCLB.tic <- subset(NC344oH7Btic, TRAIT=="NLB_NOM65")$TIC
+SCLB.tic <- subset(NC344oH7Btic, TRAIT=="SLB_NOM65")$TIC
+```
+
+
+```{r}
+#################
+#### rrcovHD ####
+#################
+
+## keep only markers tested for all traits
+lods.rrcovHD <- lods[complete.cases(lods),] 
+
+## convert LOD to probability
+lods.rrcovHD$gw.prob <- pchisq(lods.rrcovHD$gw.lod*(2*log(10)),df=1,lower.tail=FALSE)/2
+lods.rrcovHD$gls.prob <- pchisq(lods.rrcovHD$gls.lod*(2*log(10)),df=1,lower.tail=FALSE)/2
+lods.rrcovHD$nlb.prob <- pchisq(lods.rrcovHD$nclb.lod*(2*log(10)),df=1,lower.tail=FALSE)/2
+lods.rrcovHD$slb.prob <- pchisq(lods.rrcovHD$sclb.lod*(2*log(10)),df=1,lower.tail=FALSE)/2
+
+## convert p to negative log10(p)
+lods.rrcovHD$gw.neglog10p <- -log10(lods.rrcovHD$gw.prob)
+lods.rrcovHD$gls.neglog10p <- -log10(lods.rrcovHD$gls.prob)
+lods.rrcovHD$nlb.neglog10p <- -log10(lods.rrcovHD$nlb.prob)
+lods.rrcovHD$slb.neglog10p <- -log10(lods.rrcovHD$slb.prob)
+
+## compute Outlier Mahdist (Rousseeuw and Zomeren)
+lods.rrcovHD.test <- cbind.data.frame(gr=rep("a",nrow(lods.rrcovHD)), lods.rrcovHD[,14:17]) #based on the negative log10 values
+lods.rrcovHD.out <- OutlierMahdist(gr~., lods.rrcovHD.test, control="mcd")
+
+## bind data
+rrcovHD.out <- cbind.data.frame(lods.rrcovHD,
+                         rrcovHD.distance=getDistance(lods.rrcovHD.out))
+
+## compute p-values (Chi-square value = squared rrcovHD.distance)
+rrcovHD.out$rrcovHD.pvalue <- pchisq(rrcovHD.out$rrcovHD.distance^2, df=3, lower.tail=F)
+
+# Adjust P-values for Multiple Comparisons
+# Benjamini & Hochberg (1995) ("BH" or its alias "fdr")
+# The "BH" (aka "fdr") and "BY" method of Benjamini, Hochberg, and Yekutieli control the false discovery rate, the expected proportion of false discoveries amongst the rejected hypotheses.
+
+## compute FDR 
+rrcovHD.out$rrcovHD.FDR <- p.adjust(rrcovHD.out$rrcovHD.pvalue, method = "BH")
+
+
+rrcovHD.out <- merge(map, rrcovHD.out, by.x = "MarkerName",by.y = "MarkerID") #189 obs
+rrcovHD.out <- rrcovHD.out[order(rrcovHD.out$Chr, rrcovHD.out$cM),]
+rrcovHD.out[which(rrcovHD.out$rrcovHD.FDR<0.01),]
+
+
+rrcovHD.out$gw.tic <- rrcovHD.out$gw.lod >= GW.tic
+rrcovHD.out$gls.tic <- rrcovHD.out$gls.lod >= GLS.tic
+rrcovHD.out$nlb.tic <- rrcovHD.out$nclb.lod >= NCLB.tic
+rrcovHD.out$slb.tic <- rrcovHD.out$sclb.lod >= SCLB.tic
+rrcovHD.out[intersect(which(apply(rrcovHD.out[,c("gw.tic","gls.tic","nlb.tic","slb.tic")]==TRUE,1,any)), which(rrcovHD.out$rrcovHD.FDR<0.01)),]
+# which return the row numbers
+# if any of the tic are TRUE + FDR <0.01 
+# Decalre significance if LOD > tic for at least 1 disease QTL and Md FDR of 1%
+
+```
+
+```{r}
+forplot <- rrcovHD.out
+forplot$rrcovHD.FDR.sig <- "n.s"
+
+## Decalre significance if LOD > tic for at least 1 disease QTL and Md FDR of 1%
+forplot$rrcovHD.FDR.sig[intersect(which(apply(forplot[,c("gw.tic","gls.tic","nlb.tic","slb.tic")]==TRUE,1,any)), which(forplot$rrcovHD.FDR<0.01))] <- "sig."
+
+# Retrieve or set the dimension of an object
+dim(forplot[which(apply(forplot[,c("gls.tic","nlb.tic","slb.tic","gw.tic")]==TRUE,1,any)),]) #17 29
+dim(subset(forplot, rrcovHD.FDR<0.01)) #36 29
+
+# the minimum distance of the adjusted p-value which is less than 0.01
+Md.1pFDR_threshold <- min(subset(rrcovHD.out, rrcovHD.FDR<0.01)$rrcovHD.distance) #[1] 4.082515
+
+
+# paste function basiclly put all the things together as characters- for the putput file name in this example
+# write.table output forplot dataframe in a specified connection
+# write.table(forplot, paste("rrcovHD_Md_",cross,".csv", sep=""), sep=",", col.names=TRUE, row.names=FALSE)
+```
+
+
+```{r}
+########################
+#### Manhattan plot ####
+########################
+forplot.man <- merge(map.master.deduped, forplot, by="MarkerName", all.x=TRUE)
+# maybe delete the all.x=TRUE?? Not very sure....
+forplot.man <- forplot.man[order(forplot.man[,2], forplot.man[,3]),]
+
+
+#The pipe %>% passes the data frame output that results from the function right before the pipe to input it as the first argument of the function right after the pipe.
+mnhtn <- forplot.man %>% 
+  # Compute chromosome size
+  group_by(Chr.x) %>% 
+  summarise(chr_len=max(cM.x)) %>% 
+  # Calculate cumulative position of each chromosome
+  mutate(tot=cumsum(chr_len)-chr_len) %>%
+  select(-chr_len) %>%
+  # Add this info to the initial dataset
+  left_join(forplot.man, ., by=c("Chr.x"="Chr.x")) %>%
+  # Add a cumulative position of each SNP
+  arrange(Chr.x, cM.x) %>%
+  mutate(cMcum=cM.x+tot)
+
+axisdf = mnhtn %>% group_by(Chr.x) %>% summarize(center=( max(cMcum) + min(cMcum) ) / 2 )
+
+#classify significant markers ()
+mnhtn$rrcovHD.FDR.sig <- as.factor(mnhtn$rrcovHD.FDR.sig)
+mnhtn$rrcovHD.FDR.sig <- factor(mnhtn$rrcovHD.FDR.sig, levels=rev(levels(mnhtn$rrcovHD.FDR.sig)))
+# get the levels for the plot, reverse the levels, make sig first
+  
+mnhtn$disease <- as.factor(rep("n.s",nrow(mnhtn)))
+levels(mnhtn$disease) <- c("GW","GLS","NCLB","SCLB","MO")
+
+## color coding based on population-disease specfiic thresholds
+#some errors may throw here, when there is no value meeting the threshold - can be ignored
+mnhtn[which(mnhtn$gw.lod<GW.tic & mnhtn$gls.lod<GLS.tic & mnhtn$sclb.lod<SCLB.tic & mnhtn$nclb.lod<NCLB.tic),]$disease <- "MO"
+mnhtn[which(mnhtn$gw.lod>GW.tic),]$disease <- "GW"
+mnhtn[which(mnhtn$gls.lod>GLS.tic),]$disease <- "GLS"
+mnhtn[which(mnhtn$sclb.lod>SCLB.tic),]$disease <- "SCLB"
+mnhtn[which(mnhtn$nclb.lod>NCLB.tic),]$disease <- "NCLB"
+
+
+
+
+delimcCHR.min <- aggregate(cMcum ~ Chr.x, data = mnhtn, min)
+delimcCHR.max <- aggregate(cMcum ~ Chr.x, data = mnhtn, max)
+delimcCHR <- c(0,(delimcCHR.max[1:9,2])+(delimcCHR.min[2:10,2])-(delimcCHR.max[1:9,2]))
+
+names(mnhtn)[names(mnhtn)=="disease"] <- "Disease" # legend title should be Disease
+######################
+
+p2 <- ggplot(mnhtn, aes(x=cMcum, y=rrcovHD.distance, shape=Disease, fill=Disease)) +
+    # delimit chromsomes 
+    geom_vline(xintercept=delimcCHR, colour="grey") +
+    # Md treshold
+    geom_hline(yintercept=min(subset(mnhtn,rrcovHD.FDR.sig=="sig.")$rrcovHD.distance), linetype = "dashed") +
+    geom_hline(yintercept=Md.1pFDR_threshold, linetype = "dotted") +
+    # Show all points
+    geom_point(alpha=1, size=3, color="black",aes(shape=Disease, fill=Disease)) +
+    scale_shape_manual(values = c(24,24,24,24,1)) +
+    scale_fill_manual(values=c("#D55E00","#009E73" , "#56B4E9","#0072B2",'gray97')) +
+    # scale_shape_manual(name="", values=c(21, 25)) +
+    # scale_colour_manual(name="", values=c("#000000", "#999999")) +
+    # Treshsold
+    # custom X axis:
+    scale_x_continuous( label=axisdf$Chr.x, breaks=axisdf$center) +
+    scale_y_continuous(limits=c(0,35), expand=c(0,0), breaks=seq(0,35,5)) +     # remove space between plot area and x axis
+    # axis and title labels
+    xlab("Chromosome") + ylab("Md") +
+    # Custom the theme:
+    theme(#plot.background = element_blank()
+    plot.title = element_text(face="bold", hjust=0, vjust=1)
+    ,panel.grid       = element_line(colour = "black")
+    ,panel.grid.major = element_blank()
+    ,panel.grid.minor = element_blank()
+    ,panel.border = element_rect(size = rel(1), fill=NA, colour = "black")
+    ,panel.background = element_blank()
+    ,axis.title.x = element_text(size=12, margin = margin(t=10))
+    ,axis.text.x = element_text(size=10, margin = margin(l=10), angle=90, vjust=0.5, hjust=0.5)
+    ,axis.title.y = element_text(angle=90, size=12, margin = margin(t=10))
+    ,axis.text.y = element_text(size=10, margin = margin(l=10))
+    # top, right, bottom, left
+    ,plot.margin=unit(c(0.25,0.25,0.25,0.25), "cm")
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("NC304Oh7B")
+
+p2
+
+ggsave(paste(cross,"mht.pdf",sep=""), p2,  height=4.5, width=8.5)
+
+
+```
