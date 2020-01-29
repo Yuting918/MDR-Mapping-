@@ -1,0 +1,102 @@
+---
+title: "heatmap"
+author: "Yuting Qiu"
+date: "12/4/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(readxl)
+library(ggplot2)
+library(scales)
+library(tidyverse)
+library(dplyr)
+library(ggpubr)
+library(egg)
+library(gridExtra)
+```
+
+```{r}
+gls <- read_excel("for_heatmap.xlsx", sheet = "gls.plot", col_types = c("text", "numeric", "numeric"))
+gls %>% arrange(bin)
+gls[4,3] <- "1.03a"
+gls[5,3] <- "1.03b"
+gls$bin <- as.character(gls$bin)
+gls$bin <- factor(gls$bin, levels = c("1.01", "1.02", "1.03a", "1.03b", "1.05","1.07", "2.03", "2.04","2.07","2.09", "3.04", "3.06", "3.07", "3.09", "4.03", "4.05","4.06", "4.07", "4.08", "4.09","5.01", "5.03","5.04", "6.01","6.05", "7.01", "7.02", "8.01", "8.03", "8.04", "8.06", "9.02", "9.03", "9.05","9.06","10.02","10.05","10.06"))
+
+gw <- read_excel("for_heatmap.xlsx", sheet = "gw.plot", col_types = c("text", "numeric", "numeric"))
+gw[5,3] <- "1.03a"
+gw[45,3] <- "1.03b"
+gw$bin <- factor(gw$bin, levels = c("1.01", "1.02", "1.03a", "1.03b", "1.05","1.07", "2.03", "2.04","2.07","2.09", "3.04", "3.06", "3.07", "3.09", "4.03", "4.05","4.06", "4.07", "4.08", "4.09","5.01", "5.03","5.04", "6.01","6.05", "7.01", "7.02", "8.01", "8.03", "8.04", "8.06", "9.02", "9.03", "9.05","9.06","10.02","10.05","10.06"))
+
+nlb <- read_excel("for_heatmap.xlsx", sheet = "nlb.plot", col_types = c("text", "numeric", "numeric"))
+nlb[17,3] <- "1.03a"
+nlb[51,3] <- "1.03b"
+nlb$bin <- factor(nlb$bin, levels = c("1.01", "1.02", "1.03a", "1.03b", "1.05","1.07", "2.03", "2.04","2.07","2.09", "3.04", "3.06", "3.07", "3.09", "4.03", "4.05","4.06", "4.07", "4.08", "4.09","5.01", "5.03","5.04", "6.01","6.05", "7.01", "7.02", "8.01", "8.03", "8.04", "8.06", "9.02", "9.03","9.05", "9.06","10.02","10.05","10.06"))
+
+slb <- read_excel("for_heatmap.xlsx", sheet = "slb.plot", col_types = c("text", "numeric", "numeric"))
+slb[19,3] <- "1.03a"
+slb[20,3] <- "1.03b"
+```
+
+
+```{r}
+slb$bin <- factor(slb$bin, levels = c("1.01", "1.02", "1.03a", "1.03b", "1.05","1.07", "2.03", "2.04","2.07","2.09", "3.04", "3.06", "3.07", "3.09", "4.03", "4.05","4.06", "4.07", "4.08", "4.09","5.01", "5.03","5.04", "6.01","6.05", "7.01", "7.02", "8.01", "8.03", "8.04", "8.06", "9.02", "9.03", "9.05","9.06","10.02","10.05","10.06"))
+```
+
+
+```{r}
+gls.p <- ggplot(data = gls, mapping = aes(x=bin, y=Donor)) +
+  geom_tile(aes(fill=GLS)) +
+  xlab(label = "BIN") +
+  scale_fill_gradient2(low = "#052955",high = "#AE9C45",mid="white", na.value = "red4") +
+  theme(axis.line = element_line(size = 1, colour = "black"),panel.background = element_rect(fill = "white")) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10), axis.text.y = element_text(size = 11), plot.title = element_text(hjust = 0.5)) + 
+  coord_fixed(ratio = 1.5) +
+  labs(title = "Gray leaf spot") 
+
+gw.p <- ggplot(data = gw, mapping = aes(x=bin, y=Donor)) +
+  geom_tile(aes(fill=GW)) +
+  xlab(label = "BIN") +
+  scale_fill_gradient2(low = "#052955",high = "#AE9C45",mid="white", na.value = "red4") +
+  theme(axis.line = element_line(size = 1, colour = "black"),panel.background = element_rect(fill = "white")) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=10), axis.text.y = element_text(size = 11), plot.title = element_text(hjust = 0.5)) + 
+  coord_fixed(ratio = 1.5) +
+  labs(title = "Goss's wilt")
+  
+
+nlb.p <- ggplot(data = nlb, mapping = aes(x=bin, y=Donor)) +
+  geom_tile(aes(fill=NCLB)) +
+  xlab(label = "BIN") +
+  scale_fill_gradient2(low = "#052955",high = "#AE9C45",mid="white", na.value = "red4") +
+  theme(axis.line = element_line(size = 1, colour = "black"),panel.background = element_rect(fill = "white")) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10), axis.text.y = element_text(size = 11), plot.title = element_text(hjust = 0.5)) + 
+  coord_fixed(ratio = 1.5) +
+  labs(title = "Northern corn leaf blight")
+
+
+slb.p <- ggplot(data = slb, mapping = aes(x=bin, y=Donor)) +
+  geom_tile(aes(fill=SCLB)) +
+  xlab(label = "BIN") +
+  scale_fill_gradient2(low = "#052955",high = "#AE9C45",mid="white", na.value = "red4") +
+  theme(axis.line = element_line(size = 1, colour = "black"),panel.background = element_rect(fill = "white")) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10), axis.text.y = element_text(size=11), plot.title = element_text(hjust = 0.5)) + 
+  coord_fixed(ratio = 1.5) + 
+  labs(title = "Southern corn leaf blight")
+```
+
+
+# putting four plots together
+```{r}
+library(grid)
+library(gridExtra)
+grid.arrange(gls.p, gw.p, nlb.p, slb.p,nrow=4, top=textGrob("Additive effect of identified QTL in four populations for four diseases", gp=gpar(fontsize=18))) -> heatmap1
+ggsave(heatmap1,file='heatmap4.png', units = "cm", width = 25, height = 30)
+
+```
+
