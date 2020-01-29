@@ -1,0 +1,198 @@
+---
+title: "MDR Bin Effect Plot @ November 2019"
+author: "Yuting Qiu"
+date: 2019-11-22
+output: html_notebook
+---
+
+```{r}
+library(readxl)
+bin_line_audpc <- read_excel("3.bin_plot_for_R_Nov.xlsx", sheet = "COMBINED")
+```
+
+```{r}
+OBLS <- 212.6147059
+OGW <- 520.813253
+OSLB <- 5.806428571
+ONLB <- 55.51348651
+OGLS <- 5.689814815
+
+bin_line_audpc$SLB <- as.numeric(bin_line_audpc$SLB)
+bin_line_audpc$NLB <- as.numeric(bin_line_audpc$NLB)
+bin_line_audpc$BLS <- as.numeric(bin_line_audpc$BLS)
+bin_line_audpc$GW <- as.numeric(bin_line_audpc$GW)
+bin_line_audpc$GLS <- as.numeric(bin_line_audpc$GLS)
+
+bin_line_audpc$SLBd <- with(bin_line_audpc, (SLB - OSLB)/OSLB)
+bin_line_audpc$NLBd <- with(bin_line_audpc, (NLB - ONLB)/ONLB)
+bin_line_audpc$GLSd <- with(bin_line_audpc, (GLS - OGLS)/OGLS)
+bin_line_audpc$BLSd <- with(bin_line_audpc, (BLS - OBLS)/OBLS)
+bin_line_audpc$GWd <- with(bin_line_audpc, (GW - OGW)/OGW)
+```
+
+
+
+```{r}
+library(plyr)
+# run the function length, mean and sd on the value of five diseases for each bin
+# broken down by disease + bin
+# se=sd/sqrt(n)
+# need to handle for the missing data
+# due to the scale, negative sign add to SLB and GLS
+
+SLBpct <- ddply(bin_line_audpc, "BIN", summarise,
+                N = sum(!is.na(SLB)),
+                mean = mean(SLBd, na.rm = TRUE) * -1,
+                sd = sd(SLBd, na.rm = TRUE),
+                se = sd / sqrt(N))
+SLBpct
+
+NLBpct <- ddply(bin_line_audpc, "BIN", summarise,
+                N = sum(!is.na(NLB)),
+                mean = mean(NLBd, na.rm = TRUE),
+                sd = sd(NLBd, na.rm = TRUE),
+                se = sd / sqrt(N))
+NLBpct
+
+GLSpct <- ddply(bin_line_audpc, "BIN", summarise,
+                N = sum (!is.na(GLS)),
+                mean = mean(GLSd, na.rm = TRUE) * -1,
+                sd = sd(GLSd, na.rm = TRUE),
+                se = sd / sqrt(N))
+GLSpct
+
+
+BLSpct <- ddply(bin_line_audpc, "BIN", summarise,
+                N = sum(!is.na(BLS)),
+                mean = mean(BLSd, na.rm = TRUE),
+                sd = sd(BLSd, na.rm = TRUE),
+                se = sd / sqrt(N))
+BLSpct
+
+GWpct <- ddply(bin_line_audpc, "BIN", summarise,
+               N = sum(!is.na(GW)),
+               mean = mean (GWd, na.rm = TRUE),
+               sd = sd(GWd, na.rm = TRUE),
+               se = sd / sqrt(N))
+GWpct
+
+```
+
+combine into one table
+```{r}
+BLSpct$DIS <- "BLS"
+GLSpct$DIS <- "GLS"
+GWpct$DIS <- "GW"
+NLBpct$DIS <- "NCLB"
+SLBpct$DIS <- "SCLB"
+
+bin_pct <- rbind(BLSpct,GLSpct)
+bin_pct <- rbind(bin_pct,GWpct)
+bin_pct <- rbind(bin_pct,NLBpct)
+bin_pct <- rbind(bin_pct,SLBpct)
+```
+
+
+# t-test based on every data point of the difference compared to Oh7B
+# for signigicance level
+```{r}
+bin <- c("1.05", "3.04", "4.06", "8.03", "9.02")
+dis <- c("SCLB","NCLB","GLS","BLS","GW")
+
+SLB1 <- t.test(subset(bin_line_audpc, BIN == "1.05")$SLBd, mu=0, na.omit = TRUE)$p.value
+SLB3 <- t.test(subset(bin_line_audpc, BIN == "3.04")$SLBd, mu=0, na.omit = TRUE)$p.value
+SLB4 <- t.test(subset(bin_line_audpc, BIN == "4.06")$SLBd, mu=0, na.omit = TRUE)$p.value
+SLB8 <- t.test(subset(bin_line_audpc, BIN == "8.03")$SLBd, mu=0, na.omit = TRUE)$p.value
+SLB9 <- t.test(subset(bin_line_audpc, BIN == "9.02")$SLBd, mu=0, na.omit = TRUE)$p.value
+SLB_ttest <- data.frame("dis" = "SCLB", BIN = c("1.05", "3.04", "4.06", "8.03", "9.02"), "pvalue" = c(SLB1, SLB3, SLB4,SLB8,SLB9))
+
+NLB1 <- t.test(subset(bin_line_audpc, BIN == "1.05")$NLBd, mu=0, na.omit = TRUE)$p.value
+NLB3 <- t.test(subset(bin_line_audpc, BIN == "3.04")$NLBd, mu=0, na.omit = TRUE)$p.value
+NLB4 <- t.test(subset(bin_line_audpc, BIN == "4.06")$NLBd, mu=0, na.omit = TRUE)$p.value
+NLB8 <- t.test(subset(bin_line_audpc, BIN == "8.03")$NLBd, mu=0, na.omit = TRUE)$p.value
+NLB9 <- t.test(subset(bin_line_audpc, BIN == "9.02")$NLBd, mu=0, na.omit = TRUE)$p.value
+NLB_ttest <- data.frame("dis" = "NCLB", BIN = c("1.05", "3.04", "4.06", "8.03", "9.02"), "pvalue" = c(NLB1, NLB3, NLB4,NLB8,NLB9))
+
+GLS1 <- t.test(subset(bin_line_audpc, BIN == "1.05")$GLSd, mu=0, na.omit = TRUE)$p.value
+GLS3 <- t.test(subset(bin_line_audpc, BIN == "3.04")$GLSd, mu=0, na.omit = TRUE)$p.value
+GLS4 <- t.test(subset(bin_line_audpc, BIN == "4.06")$GLSd, mu=0, na.omit = TRUE)$p.value
+GLS8 <- t.test(subset(bin_line_audpc, BIN == "8.03")$GLSd, mu=0, na.omit = TRUE)$p.value
+GLS9 <- t.test(subset(bin_line_audpc, BIN == "9.02")$GLSd, mu=0, na.omit = TRUE)$p.value
+GLS_ttest <- data.frame("dis" = "GLS", BIN = c("1.05", "3.04", "4.06", "8.03", "9.02"), "pvalue" = c(GLS1, GLS3, GLS4,GLS8,GLS9))
+
+BLS1 <- t.test(subset(bin_line_audpc, BIN == "1.05")$BLSd, mu=0, na.omit = TRUE)$p.value
+BLS3 <- t.test(subset(bin_line_audpc, BIN == "3.04")$BLSd, mu=0, na.omit = TRUE)$p.value
+BLS4 <- t.test(subset(bin_line_audpc, BIN == "4.06")$BLSd, mu=0, na.omit = TRUE)$p.value
+BLS8 <- t.test(subset(bin_line_audpc, BIN == "8.03")$BLSd, mu=0, na.omit = TRUE)$p.value
+BLS9 <- t.test(subset(bin_line_audpc, BIN == "9.02")$BLSd, mu=0, na.omit = TRUE)$p.value
+BLS_ttest <- data.frame("dis" = "BLS", BIN = c("1.05", "3.04", "4.06", "8.03", "9.02"), "pvalue" = c(BLS1, BLS3, BLS4,BLS8,BLS9))
+
+GW1 <- t.test(subset(bin_line_audpc, BIN == "1.05")$GWd, mu=0, na.omit = TRUE)$p.value
+GW3 <- t.test(subset(bin_line_audpc, BIN == "3.04")$GWd, mu=0, na.omit = TRUE)$p.value
+GW4 <- t.test(subset(bin_line_audpc, BIN == "4.06")$GWd, mu=0, na.omit = TRUE)$p.value
+GW8 <- t.test(subset(bin_line_audpc, BIN == "8.03")$GWd, mu=0, na.omit = TRUE)$p.value
+GW9 <- t.test(subset(bin_line_audpc, BIN == "9.02")$GWd, mu=0, na.omit = TRUE)$p.value
+GW_ttest <- data.frame("dis" = "GW", BIN = c("1.05", "3.04", "4.06", "8.03", "9.02"), "pvalue" = c(GW1, GW3, GW4,GW8,GW9))
+
+allttest <- rbind(SLB_ttest,NLB_ttest,GLS_ttest,BLS_ttest,GW_ttest)
+allttest$pvl <- format(allttest$pvalue, scientific = FALSE, digits = 5)
+
+# library(xlsx) 
+# write.csv(allttest, "allttest_pval.csv")
+```
+
+
+# MAKING plot
+```{r}
+library(ggplot2)
+bin_pct$BIN <- factor(bin_pct$BIN)
+
+library(formattable)
+bin_pct$Change <- percent(bin_pct$mean,digits = 2)
+
+# can set level sequence
+bin_pct$DIS <- factor(bin_pct$DIS, levels = c("BLS", "GW", "SCLB", "NCLB", "GLS"))
+
+plot <- ggplot(bin_pct, aes(x=BIN, y=mean, fill=DIS)) +
+  geom_bar(stat="identity",
+           colour="black", #outline 
+           size=0.3, #use thinner line
+           position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-se,ymax=mean+se), size=0.3, width=0.2,
+                position = position_dodge(0.9)) +
+  scale_y_continuous(labels = scales::percent, minor_breaks = seq(-0.4 , 0.4 , 0.05), breaks = seq(-0.4, 0.4, 0.1)) +
+  xlab("Chromosomal region") +
+  ylab("Percentage change relative to Oh7B") +
+  scale_fill_manual(values=c("#E7B800","#D55E00", "#0072B2", "#56B4E9","#009E73"),
+                    name="Disease") +
+  theme_bw() + #quick function, white background and grey grid lines 
+  theme(legend.title = element_text(size = 10, face = "bold"),
+        plot.title = element_text(size = 12, face="bold",
+                                 hjust = 0 ),
+        axis.text = element_text(size = 10),
+        axis.title = element_text(size = 11),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.major.y = element_line(size=0.3))+ 
+ # remove vertical line
+  annotate("text",x=0.82, y=0.335, label="***")+
+  annotate("text",x=1.015, y=-0.11, label="***")+
+  annotate("text",x=1.37, y=-0.135, label="***")+
+  annotate("text",x=1.82, y=0.23, label="**")+
+  annotate("text",x=2, y=-0.168, label="***")+
+  annotate("text",x=2.18, y=-0.098, label="*")+
+  annotate("text",x=2.37, y=-0.073, label="***")+
+  annotate("text", x=2.64, y=-0.34, label="**")+
+  annotate("text",x=2.81, y=0.295, label="**")+
+  annotate("text",x=3, y=-0.135, label="***")+
+  annotate("text", x=3.82, y=-0.195, label="*") +
+  annotate("text", x=4.18, y=-0.117, label="**") +
+  annotate("text", x=4.38, y=-0.117, label="***") +
+  annotate("text", x=4.83, y=-0.335, label="***") +
+  annotate("text", x=5, y=-0.115, label="**") +
+  annotate("text", x=5.35, y=-0.13, label="***")
+
+print(plot)
+
+ggsave("bin effct.pdf", plot,  height=4.5, width=8.5)
+```
