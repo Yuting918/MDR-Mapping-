@@ -1,0 +1,610 @@
+---
+title: "Genotype_recode"
+output: html_notebook
+author: "Yuting Qiu"
+date: "2019-10-2"
+---
+
+Description: this is used to change the code with a loop in R and do some basic quality control, set the possible error sequnecing error in the marker as NA.
+
+
+```{r}
+#read in data
+library(readxl)
+D38 <- read_excel("geno_rqtl.xlsx", sheet = "D38_F")
+D58 <- read_excel("geno_rqtl.xlsx", sheet = "D58_F")
+D68 <- read_excel("geno_rqtl.xlsx", sheet = "D68_F")
+D78 <- read_excel("geno_rqtl.xlsx", sheet = "D78_F")
+```
+
+
+# it should work now
+
+```{r}
+# i is the number of column
+# j is the number of row
+# p[i,j] i is row, j is column
+
+cross <- D38
+cross_l <- length(names(cross)) #column number
+for (i in 1:cross_l){
+  if(as.vector(unlist(cross[1,i])) =="CC" | as.vector(unlist(cross[1,i])) =="GG" | as.vector(unlist(cross[1,i])) =="AA" | as.vector(unlist(cross[1,i])) =="GG") {
+    cross[,i] <- gsub("AB","NA", cross[,i]);
+    cross[,i] <- gsub("BB","NA", cross[,i])
+  }
+}
+
+# write.csv(cross, "D68_modifiec.csv")
+# Not verfied for BB, see later
+
+cross <- D58
+cross_l <- length(names(cross)) #column number
+for (i in 1:cross_l){
+  if(as.vector(unlist(cross[1,i])) =="CC" | as.vector(unlist(cross[1,i])) =="GG" | as.vector(unlist(cross[1,i])) =="AA" | as.vector(unlist(cross[1,i])) =="GG") {
+    cross[,i] <- gsub("AB","NA", cross[,i]);
+    cross[,i] <- gsub("BB","NA", cross[,i])
+  }
+}
+
+# write.csv(cross, "D58_modifiec.csv")
+
+cross <- D68
+cross_l <- length(names(cross)) #column number
+for (i in 1:cross_l){
+  if(as.vector(unlist(cross[1,i])) =="CC" | as.vector(unlist(cross[1,i])) =="GG" | as.vector(unlist(cross[1,i])) =="AA" | as.vector(unlist(cross[1,i])) =="GG") {
+    cross[,i] <- gsub("AB","NA", cross[,i]);
+    cross[,i] <- gsub("BB","NA", cross[,i])
+  }
+}
+
+# write.csv(cross, "D68_modifiec.csv")
+
+cross <- D78
+cross_l <- length(names(cross)) #column number
+for (i in 1:cross_l){
+  if(as.vector(unlist(cross[1,i])) =="CC" | as.vector(unlist(cross[1,i])) =="GG" | as.vector(unlist(cross[1,i])) =="AA" | as.vector(unlist(cross[1,i])) =="GG") {
+    cross[,i] <- gsub("AB","NA", cross[,i]);
+    cross[,i] <- gsub("BB","NA", cross[,i])
+  }
+}
+
+# write.csv(cross, "D68_modifiec.csv")
+
+
+```
+
+
+# merge gonotype file and phenotype file to get the format that can be used in R QC
+```{r}
+D38_GENO <- read.csv("D38_modifiec.csv")
+D58_GENO <- read.csv("D58_modifiec.csv")
+D68_GENO <- read.csv("D68_modifiec.csv")
+D78_GENO <- read.csv("D78_modifiec.csv")
+library(readxl)
+D38_P <- read_excel("pheno.xlsx", sheet = "DRIL38")
+D58_P <- read_excel("pheno.xlsx", sheet = "DRIL58")
+D68_P <- read_excel("pheno.xlsx", sheet = "DRIL68")
+D78_P <- read_excel("pheno.xlsx", sheet = "DRIL78")
+
+D38GP <- merge(D38_GENO, D38_P, by.x = "Public.Name", by.y = "Public Name", all.x = TRUE)
+D58GP <- merge(D58_GENO, D58_P, by.x = "Public.Name", by.y = "Public Name", all.x = TRUE)
+D68GP <- merge(D68_GENO, D68_P, by.x = "Public.Name", by.y = "Public Name", all.x = TRUE)
+D78GP <- merge(D78_GENO, D78_P, by.x = "Public.Name", by.y = "Public Name", all.x = TRUE)
+
+write.csv(D38GP, "D38GP.csv")
+write.csv(D58GP, "D58GP.csv")
+write.csv(D68GP, "D68GP.csv")
+write.csv(D68GP, "D78GP.csv")
+```
+
+follow the book https://www.biostat.wisc.edu/sites/default/files/tr_214.pdf
+and conduct QC
+
+
+
+###############################################
+######### QC ##################################
+###############################################
+
+```{r}
+library(qtl)
+DRIL38_GW <- read.cross("csv", dir = "C:/Users/yutingq2/Desktop/1819GossWilt/5. Joint-linkage_mapping/QC_in_R/QC_joint_linkage/QC_READY","D38GP_GW.csv", estimate.map = FALSE, genotypes=c("AA","BB","AB"), na.strings=c("-","NA"), crosstype = "f2") 
+# with estimate being false, the markers will be assigned to dummy locations, with no attempt to estimate the inter-marker distances
+summary(DRIL38_GW)
+
+DRIL58_GW <- read.cross("csv", dir = "C:/Users/yutingq2/Desktop/1819GossWilt/5. Joint-linkage_mapping/QC_in_R/QC_joint_linkage/QC_READY","D58GP_GW.csv", estimate.map = FALSE, genotypes=c("AA","BB","AB"), na.strings=c("-","NA"), crosstype = "f2") 
+summary(DRIL58_GW)
+
+DRIL68_GW <- read.cross("csv", dir = "C:/Users/yutingq2/Desktop/1819GossWilt/5. Joint-linkage_mapping/QC_in_R/QC_joint_linkage/QC_READY","D68GP_GW.csv", estimate.map = FALSE, genotypes=c("AA","BB","AB"), na.strings=c("-","NA"), crosstype = "f2") 
+summary(DRIL68_GW)
+
+DRIL78_GW <- read.cross("csv", dir = "C:/Users/yutingq2/Desktop/1819GossWilt/5. Joint-linkage_mapping/QC_in_R/QC_joint_linkage/QC_READY","D78GP_GW.csv", estimate.map = FALSE, genotypes=c("AA","BB","AB"), na.strings=c("-","NA"), crosstype = "f2") 
+summary(DRIL78_GW)
+
+
+```
+
+get the overall map about the genotype
+```{r}
+plot(DRIL38_GW)
+plot(DRIL58_GW)
+plot(DRIL68_GW)
+plot(DRIL78_GW)
+
+jittermap(DRIL38_GW)
+jittermap(DRIL58_GW)
+jittermap(DRIL68_GW)
+jittermap(DRIL78_GW)
+# overall, there are some missing, and several markers has a lot of missing data. 
+```
+
+
+# 1. omit individuals and markers with missing data
+```{r}
+plotMissing(DRIL38_GW)
+plotMissing(DRIL58_GW)
+plotMissing(DRIL68_GW)
+plotMissing(DRIL78_GW)
+
+# look at the number of markers for indiviuals and the number of genotype by individual
+# to omit the individuals with a lot of missing data
+# ntyped() is used to Count the number of genotypes for each individual or each marker in a cross.
+par(mfrow=c(1,2), las=0)
+plot(ntyped(DRIL38_GW, what = "ind"), ylab = "Num. of typed markers", main = "Num. of genotypes by individual")
+plot(ntyped(DRIL38_GW, what = "mar"), ylab = "Num. of typed individuals", main = "Num. of individuals by marker")
+
+par(mfrow=c(1,2), las = 0)
+plot(ntyped(DRIL58_GW, what = "ind"), ylab = "Num. of typed markers", main = "Num. of genotypes by individual")
+plot(ntyped(DRIL58_GW, what = "mar"), ylab = "Num. of typed individuals", main = "Num. of indiduals by marker")
+
+par(mfrow=c(1,2), las=0)
+plot(ntyped(DRIL68_GW, what = "ind"), ylab = "Num. of tyoed markers", main = "Num. of genotypes by invidual")
+plot(ntyped(DRIL68_GW, what = "mar"), ylab = "Num. of typed individuals", main = "Num. of indiduals by marker")
+
+par(mfrow=c(1,2), las=0)
+plot(ntyped(DRIL78_GW, what = "ind"), ylab = "Num. of tyoed markers", main = "Num. of genotypes by invidual")
+plot(ntyped(DRIL78_GW, what = "mar"), ylab = "Num. of typed individuals", main = "Num. of indiduals by marker")
+```
+
+
+```{r}
+# either based on marker numbers or based on individual numbers
+
+# omit the individual missing data, 650 as cutoff, subset is for row and select is for column
+DRIL38_GW.1 <- subset(DRIL38_GW, ind = (ntyped(DRIL38_GW, "ind")>650)) #TURE OR false
+DRIL58_GW.1 <- subset(DRIL58_GW, ind = (ntyped(DRIL58_GW, "ind")>620)) #TURE OR false
+DRIL68_GW.1 <- subset(DRIL68_GW, ind = (ntyped(DRIL68_GW, "ind")>680)) #TURE OR false
+DRIL78_GW.1 <- subset(DRIL78_GW, ind = (ntyped(DRIL78_GW, "ind")>600)) #TURE OR false
+
+which(ntyped(DRIL38_GW, "ind")<650)
+## [1]   9  10  31  35  45  59 126 161 191 192 193 194
+which(ntyped(DRIL58_GW, "ind")<620)
+## [1]  57  95  96  97  98  99 100 101 102
+which(ntyped(DRIL68_GW, "ind")<680)
+## [1] 7
+which(ntyped(DRIL78_GW, "ind")<600)
+## [1] 182
+
+# omit the markers wih too much missing data , 140 as cutoff for DRIL38
+todrop_mar38 <- names(nt.bymar[ntyped(DRIL38_GW, "mar") < 140])
+## [1] "PZA00192.6" "PHM1505.31" "PZA00686.4"
+todrop_mar58 <- names(nt.bymar[ntyped(DRIL58_GW, "mar") < 68])
+## [1] "PZA00010.5" "PZA01779.1" "PHM4495.14"
+todrop_mar68 <- NULL
+todrop_mar78 <- names(nt.bymar[ntyped(DRIL78_GW, "mar") < 140])
+##[1] "PHM793.25"  "PHM15251.5" "PHM15501.9"
+
+
+```
+
+
+prior to this, I delete all the lines and markers with too many NA and then I will do the sgregation analysis. 
+
+
+#################################################
+################ NEW POINT ######################
+#################################################
+```{r}
+# now try to write a loop to conduct chi-square test in the segregation rate for the four DRIL population
+
+## test to write a loop 
+### IT WORKS! :)#####################################################################################
+library(readxl)
+sgobs38 <- read_excel("QC_READY/segratio_obs_1.xlsx", sheet = "D38")
+sgobs58 <- read_excel("QC_READY/segratio_obs_1.xlsx",  sheet = "D58")
+sgobs68 <- read_excel("QC_READY/segratio_obs_1.xlsx",  sheet = "D68")
+sgobs78 <- read_excel("QC_READY/segratio_obs_1.xlsx",  sheet = "D78")
+
+
+to_num <- function(x) {
+  for (i in 2:ncol(x)) {
+    for (j in 1:4)
+    x[j,i] <- as.numeric(x[[j,i]])
+  }
+}
+
+to_num(sgobs38)
+to_num(sgobs58)
+to_num(sgobs68)
+to_num(sgobs78)
+
+countABC <- function(x) {
+  ttcount <- numeric(ncol(x))
+  for (i in 2:ncol(x)){
+    ttcount[i] = as.numeric(x[[1,i]]) + as.numeric(x[[2,i]]) + as.numeric(x[[3,i]])
+  }
+  ttcount
+}
+
+# calculate chi-squares
+# (0.9375*(sgobs78[[1,i]]+sgobs78[[2,i]]+sgobs78[[3,i]]))
+# use the count data without NA
+# chi-square test with background and introgression ana.
+
+for(i in 2:ncol(sgobs38)) {
+  sgobs38[5,i] <-((as.numeric(sgobs38[[1,i]])-(0.9375*countABC(sgobs38)[i]))^2) / (0.9375*countABC(sgobs38)[i]) +((as.numeric(sgobs38[[3,i]]) + as.numeric(sgobs38[[2,i]]) - (0.0625*countABC(sgobs38)[i]))^2) / (0.0625*countABC(sgobs38)[i])
+}
+
+for(i in 2:ncol(sgobs58)) {
+  sgobs58[5,i] <-((as.numeric(sgobs58[[1,i]])-(0.9375*countABC(sgobs58)[i]))^2) / (0.9375*countABC(sgobs58)[i]) +((as.numeric(sgobs58[[3,i]]) + as.numeric(sgobs58[[2,i]]) - (0.0625*countABC(sgobs58)[i]))^2) / (0.0625*countABC(sgobs58)[i])
+}
+
+for(i in 2:ncol(sgobs68)) {
+  sgobs68[5,i] <-((as.numeric(sgobs68[[1,i]])-(0.9375*countABC(sgobs68)[i]))^2) / (0.9375*countABC(sgobs68)[i]) +((as.numeric(sgobs68[[3,i]]) + as.numeric(sgobs68[[2,i]]) - (0.0625*countABC(sgobs68)[i]))^2) / (0.0625*countABC(sgobs68)[i])
+}
+
+for(i in 2:ncol(sgobs78)) {
+  sgobs78[5,i] <-((as.numeric(sgobs78[[1,i]])-(0.9375*countABC(sgobs78)[i]))^2) / (0.9375*countABC(sgobs78)[i]) +((as.numeric(sgobs78[[3,i]]) + as.numeric(sgobs78[[2,i]]) - (0.0625*countABC(sgobs78)[i]))^2) / (0.0625*countABC(sgobs78)[i])
+}
+
+sgobs38[5,1] <- "chi-square"
+sgobs58[5,1] <- "chi-square"
+sgobs68[5,1] <- "chi-square"
+sgobs78[5,1] <- "chi-square"
+
+
+# calculate p-value given chi-squared and degrees of freedom
+for (i in 2:ncol(sgobs38)){
+  sgobs38[6,i] <- (pchisq(sgobs38[[5,i]],df=1, lower.tail = FALSE))
+}
+
+for (i in 2:ncol(sgobs58)){
+  sgobs58[6,i] <- (pchisq(sgobs58[[5,i]],df=1, lower.tail = FALSE))
+}
+
+for (i in 2:ncol(sgobs68)){
+  sgobs68[6,i] <- (pchisq(sgobs68[[5,i]],df=1, lower.tail = FALSE))
+}
+
+for (i in 2:ncol(sgobs78)){
+  sgobs78[6,i] <- (pchisq(sgobs78[[5,i]],df=1, lower.tail = FALSE))
+}
+
+sgobs38[6,1] <- "P-value"
+sgobs58[6,1] <- "P-value"
+sgobs68[6,1] <- "P-value"
+sgobs78[6,1] <- "P-value"
+
+# calculate NA rate
+for (i in 2:ncol(sgobs38)){
+  sgobs38[7,i] <- (sgobs38[[4,i]]/(sgobs38[[1,i]]+sgobs38[[2,i]]+sgobs38[[3,i]]+sgobs38[[4,i]]))*100
+}
+
+for (i in 2:ncol(sgobs58)){
+  sgobs58[7,i] <- (sgobs58[[4,i]]/(sgobs58[[1,i]]+sgobs58[[2,i]]+sgobs58[[3,i]]+sgobs58[[4,i]]))*100
+}
+
+for (i in 2:ncol(sgobs68)){
+  sgobs68[7,i] <- (sgobs68[[4,i]]/(sgobs68[[1,i]]+sgobs68[[2,i]]+sgobs68[[3,i]]+sgobs68[[4,i]]))*100
+}
+
+for (i in 2:ncol(sgobs78)){
+  sgobs78[7,i] <- (sgobs78[[4,i]]/(sgobs78[[1,i]]+sgobs78[[2,i]]+sgobs78[[3,i]]+sgobs78[[4,i]]))*100
+}
+
+sgobs38[7,1] <- "NA_rate"
+sgobs58[7,1] <- "NA_rate"
+sgobs68[7,1] <- "NA_rate"
+sgobs78[7,1] <- "NA_rate"
+
+## if the segregation are significantly diferent or not
+## bonferroni correaltion 
+for (i in 2:ncol(sgobs38)){
+  if (sgobs38[[6,i]] < (0.05/(ncol(sgobs38)-1))){
+    sgobs38[8,i] = "Distorted"} 
+  else {
+    sgobs38[8,i] = "OK"}
+}
+
+for (i in 2:ncol(sgobs58)){
+  if (sgobs58[[6,i]] < (0.05/(ncol(sgobs58)-1))){
+    sgobs58[8,i] = "Distorted"} 
+  else {
+    sgobs58[8,i] = "OK"}
+}
+
+for (i in 2:ncol(sgobs68)){
+  if (sgobs68[[6,i]] < (0.05/(ncol(sgobs68)-1))){
+    sgobs68[8,i] = "Distorted"} 
+  else {
+    sgobs68[8,i] = "OK"}
+}
+
+for (i in 2:ncol(sgobs78)){
+  if (sgobs78[[6,i]] < (0.05/(ncol(sgobs78)-1))){
+    sgobs78[8,i] = "Distorted"} 
+  else {
+    sgobs78[8,i] = "OK"}
+}
+
+sgobs38[8,1] <- "Distored?"
+sgobs58[8,1] <- "Distored?"
+sgobs68[8,1] <- "Distored?"
+sgobs78[8,1] <- "Distored?"
+```
+# chi-square with marker expecetd less than 5 is not acceptable, look at AB and BB together
+
+
+# write out the tales
+```{r}
+
+write.csv(sgobs38, "sgobs38_new.csv")
+write.csv(sgobs58, "sgobs58_new.csv")
+write.csv(sgobs68, "sgobs68_new.csv")
+write.csv(sgobs78, "sgobs78_new.csv")
+```
+
+
+# add three standard deviation of the data
+```{r}
+# first count the total marker number
+
+sgobs38[9,1] <- "TOTAL"
+sgobs58[9,1] <- "TOTAL"
+sgobs68[9,1] <- "TOTAL"
+sgobs78[9,1] <- "TOTAL"
+
+for (i in (2:ncol(sgobs38))){
+  sgobs38[9,i] <- as.numeric(sgobs38[[1,i]]) + as.numeric(sgobs38[[2,i]]) + as.numeric(sgobs38[[3,i]])
+}
+
+for (i in (2:ncol(sgobs58))){
+  sgobs58[9,i] <- as.numeric(sgobs58[[1,i]]) + as.numeric(sgobs58[[2,i]]) + as.numeric(sgobs58[[3,i]])
+}
+
+for (i in (2:ncol(sgobs68))){
+  sgobs68[9,i] <- as.numeric(sgobs68[[1,i]]) + as.numeric(sgobs68[[2,i]]) + as.numeric(sgobs68[[3,i]])
+}
+
+for (i in (2:ncol(sgobs78))){
+  sgobs78[9,i] <- as.numeric(sgobs78[[1,i]]) + as.numeric(sgobs78[[2,i]]) + as.numeric(sgobs78[[3,i]])
+}
+
+# now calcualte the heterozygous rate
+sgobs38[10,1] <- "heteo_rate"
+sgobs58[10,1] <- "heteo_rate"
+sgobs68[10,1] <- "heteo_rate"
+sgobs78[10,1] <- "heteo_rate"
+
+for (i in (2:ncol(sgobs38))){
+  sgobs38[10,i] <- as.numeric(sgobs38[2,i])/as.numeric(sgobs38[9,i])
+}
+
+for (i in (2:ncol(sgobs58))){
+  sgobs58[10,i] <- as.numeric(sgobs58[2,i])/as.numeric(sgobs58[9,i])
+}
+
+for (i in (2:ncol(sgobs68))){
+  sgobs68[10,i] <- as.numeric(sgobs68[2,i])/as.numeric(sgobs68[9,i])
+}
+
+for (i in (2:ncol(sgobs78))){
+  sgobs78[10,i] <- as.numeric(sgobs78[2,i])/as.numeric(sgobs78[9,i])
+}
+
+# get the sd of the hetero_rate
+sg38_hetero <- as.numeric(as.vector(sgobs38[10,2:ncol(sgobs38)])) 
+sg58_hetero <- as.numeric(as.vector(sgobs58[10,2:ncol(sgobs58)])) 
+sg68_hetero <- as.numeric(as.vector(sgobs68[10,2:ncol(sgobs68)])) 
+sg78_hetero <- as.numeric(as.vector(sgobs78[10,2:ncol(sgobs78)])) 
+
+hist(sg38_hetero)
+hist(sg58_hetero)
+hist(sg68_hetero)
+hist(sg78_hetero)
+# right tailed,not normal
+
+sg38_sd <- sd(sg38_hetero) #[1] 0.01009183
+sg58_sd <- sd(sg58_hetero) # [1] 0.01888883
+sg68_sd <- sd(sg68_hetero) # [1] 0.009789817
+sg78_sd <- sd(sg78_hetero) # [1] 0.009789817
+hist(sg38_hetero)
+```
+
+
+
+# try to take the monomorphic markers out 
+```{r}
+poly38 <- sgobs38[,1]
+poly58 <- sgobs58[,1]
+poly68 <- sgobs68[,1]
+poly78 <- sgobs78[,1]
+
+for (i in 2:ncol(sgobs38)){
+  if (sgobs38[[3,i]]!=0 & sgobs38[[8,i]]=="OK"){
+    poly38 <- cbind(poly38, sgobs38[,i])
+  }
+} 
+# 252 polymorphic markers (231 OK)
+
+for (i in 2:ncol(sgobs58)){
+  if (sgobs58[[3,i]]!=0 & sgobs58[[8,i]]=="OK"){
+    poly58 <- cbind(poly58, sgobs58[,i])
+  }
+} 
+# 230 polymorohic markers (147 OK)
+
+for (i in 2:ncol(sgobs68)){
+  if (sgobs68[[3,i]]!=0 & sgobs68[[8,i]]=="OK"){
+    poly68 <- cbind(poly68, sgobs68[,i])
+  }
+} 
+# 267 polymorphic markers (247 OK)
+
+for (i in 2:ncol(sgobs78)){
+  if (sgobs78[[3,i]]!=0 & sgobs78[[8,i]]=="OK"){
+    poly78 <- cbind(poly78, sgobs78[,i])
+  }
+} 
+# 249 polymorphic markers (238 OK)
+
+###########################################
+#########################################
+
+poly38 <- sgobs38[,1]
+poly58 <- sgobs58[,1]
+poly68 <- sgobs68[,1]
+poly78 <- sgobs78[,1]
+
+for (i in 2:ncol(sgobs38)){
+  if (sgobs38[[3,i]]!=0){
+    poly38 <- cbind(poly38, sgobs38[,i])
+  }
+} 
+# 252 polymorphic markers (231 OK)
+
+
+for (i in 2:ncol(sgobs58)){
+  if (sgobs58[[3,i]]!=0){
+    poly58 <- cbind(poly58, sgobs58[,i])
+  }
+} 
+# 230 polymorohic markers (147 OK)
+
+for (i in 2:ncol(sgobs68)){
+  if (sgobs68[[3,i]]!=0){
+    poly68 <- cbind(poly68, sgobs68[,i])
+  }
+} 
+# 267 polymorphic markers (247 OK)
+
+for (i in 2:ncol(sgobs78)){
+  if (sgobs78[[3,i]]!=0){
+    poly78 <- cbind(poly78, sgobs78[,i])
+  }
+} 
+# 249 polymorphic markers (238 OK)
+
+```
+
+
+```{r}
+# look at the new marker distribution
+hpoly38 <- as.numeric(as.vector(poly38[10,2:ncol(poly38)])) 
+hpoly58 <- as.numeric(as.vector(poly58[10,2:ncol(poly58)])) 
+hpoly68 <- as.numeric(as.vector(poly68[10,2:ncol(poly68)])) 
+hpoly78 <- as.numeric(as.vector(poly78[10,2:ncol(poly78)])) 
+
+hist(hpoly38)
+hist(hpoly58)
+hist(hpoly68)
+hist(hpoly78)
+
+# still heavily right-tailed
+# try to log it, log not working
+# how about boot-straping
+```
+
+
+```{r}
+# standard the data see if easier to find cut off
+library(caret)
+
+standard38 <- preProcess(poly38, method= c("center", "scale", "YeoJohnson", "nzv"))
+standard38.1 <- predict(standard, poly38)
+hist(as.numeric(as.vector(standard38.1[10,2:ncol(standard38.1)])), main = "distribition DRIL38 heterozugous rate")
+
+standard58 <- preProcess(poly58, method= c("center", "scale", "YeoJohnson", "nzv"))
+standard58.1 <- predict(standard, poly58)
+hist(as.numeric(as.vector(standard58.1[10,2:ncol(standard58.1)])), main = "distribition DRIL58 heterozugous rate")
+
+standard68 <- preProcess(poly68, method= c("center", "scale", "YeoJohnson", "nzv"))
+standard68.1 <- predict(standard, poly68)
+hist(as.numeric(as.vector(standard68.1[10,2:ncol(standard68.1)])), main = "distribition DRIL68 heterozugous rate")
+
+standard78 <- preProcess(poly78, method= c("center", "scale", "YeoJohnson", "nzv"))
+standard78.1 <- predict(standard, poly78)
+hist(as.numeric(as.vector(standard78.1[10,2:ncol(standard78.1)])), main = "distribition DRIL78 heterozugous rate")
+```
+
+
+
+# tranpose the dataframes and look from the line side
+```{r}
+poly38 <- sgobs38[,1]
+poly58 <- sgobs58[,1]
+poly68 <- sgobs68[,1]
+poly78 <- sgobs78[,1]
+
+for (i in 2:ncol(sgobs38)){
+  if (sgobs38[[3,i]]!=0){
+    poly38 <- cbind(poly38, sgobs38[,i])
+  }
+} 
+# 252 polymorphic markers (231 OK)
+
+
+for (i in 2:ncol(sgobs58)){
+  if (sgobs58[[3,i]]!=0){
+    poly58 <- cbind(poly58, sgobs58[,i])
+  }
+} 
+# 230 polymorohic markers (147 OK)
+
+for (i in 2:ncol(sgobs68)){
+  if (sgobs68[[3,i]]!=0){
+    poly68 <- cbind(poly68, sgobs68[,i])
+  }
+} 
+# 267 polymorphic markers (247 OK)
+
+for (i in 2:ncol(sgobs78)){
+  if (sgobs78[[3,i]]!=0){
+    poly78 <- cbind(poly78, sgobs78[,i])
+  }
+} 
+# 249 polymorphic markers (238 OK)
+
+### 
+# transpose the dataframe to look from the line side
+# we need to add line name here
+tp38 <- t(poly38)
+tp58 <- t(poly58)
+tp68 <- t(poly68)
+tp78 <- t(poly78)
+```
+
+
+
+# try the boot straping method
+```{r}
+library(boot)
+# function to obatain the mean
+Bmean <- function(data, indices){
+  d <- data[indices] # allow boot to select sample
+  return(mean(d))
+}
+
+# bootstraping with 1000 replications
+results <- boot(data = hpoly38, statistic = Bmean, R=1000)
+results
+results <- boot(data = hpoly58, statistic = Bmean, R=1000)
+results
+results <- boot(data = hpoly68, statistic = Bmean, R=1000)
+results
+results <- boot(data = hpoly78, statistic = Bmean, R=1000)
+results
+plot(results)
+
+boot.ci(results, type = c("norm", "basic", "perc","bca"))
+```
